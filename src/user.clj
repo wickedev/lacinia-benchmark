@@ -103,12 +103,12 @@
      {:buckets {:Book/authors
                 {:triggers
                  {:queue-size {:threshold 10}
-                  :interval {:interval 100}}}
+                  :interval {:interval 50}}}
                 :Author/books
                 {:triggers
                  {:queue-size {:threshold 10}
-                  :interval {:interval 100}}}}
-      :urania-opts {:env {:db nil}}}))
+                  :interval {:interval 50}}}}
+      :urania-opts {:env {}}}))
 
   (c/with-progress-reporting
     (c/bench (execute-sample-query schema {:superlifter superlifter})))
