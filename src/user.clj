@@ -10,6 +10,8 @@
             [criterium.core :as c]
             [superlifter.api :as api]))
 
+(def ^:dynamic *enable-dataloader* true)
+
 (def data (-> (io/resource "data.edn")
               slurp
               edn/read-string))
@@ -31,15 +33,23 @@
 
 (defn- resolve-book-authors
   [ctx _args book]
-  (with-superlifter
-    ctx
-    (api/enqueue! :Book/authors (->FetchAuthors (:authors book)))))
+  (if *enable-dataloader*
+    (with-superlifter
+      ctx
+      (api/enqueue! :Book/authors (->FetchAuthors (:authors book))))
+    (->> (:authors book)
+         (map authors-map)
+         kebab-case->camelCase-keys)))
 
 (defn- resolve-author-books
   [ctx _args author]
-  (with-superlifter
-    ctx
-    (api/enqueue! :Author/books (->FetchBooks (:id author)))))
+  (if *enable-dataloader*
+    (with-superlifter
+      ctx
+      (api/enqueue! :Author/books (->FetchBooks (:id author))))
+    (-> (:id author)
+        (get books-by-author)
+        kebab-case->camelCase-keys)))
 
 (defn- resolve-books
   [_context _args _value]
@@ -103,16 +113,21 @@
      {:buckets {:Book/authors
                 {:triggers
                  {:queue-size {:threshold 10}
-                  :interval {:interval 50}}}
+                  :interval {:interval 200}}}
                 :Author/books
                 {:triggers
                  {:queue-size {:threshold 10}
-                  :interval {:interval 50}}}}
+                  :interval {:interval 200}}}}
       :urania-opts {:env {}}}))
 
   (c/with-progress-reporting
     (c/bench (execute-sample-query schema {:superlifter superlifter})))
 
-  (execute-sample-query schema {:superlifter superlifter})
+  (with-bindings {#'*enable-dataloader* false}
+    (c/with-progress-reporting
+      (c/bench (execute-sample-query schema {}))))
+
+  (with-bindings {#'*enable-dataloader* false}
+    (execute-sample-query schema {}))
 
   (api/stop! superlifter))
