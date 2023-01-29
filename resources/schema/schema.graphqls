@@ -1,0 +1,24 @@
+type Author {
+    id: ID!
+    firstName: String!
+    lastName: String!
+    # Year of birth, if known.
+    from: Int
+    # Year of death, if applicable.
+    until: Int
+    books: [Book!]
+}
+
+type Book {
+    id: ID!
+    title: String!
+    # A book must have one or more authors.
+    authors: [Author!]!
+    # Year of first publication.
+    published: Int
+    subject: [String!]
+}
+
+type Query {
+    books: [Book!]!
+}
